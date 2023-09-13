@@ -1,13 +1,12 @@
 from decouple import config
 import psycopg2
-from psycopg2 import sql
 from authentication import get_user
 from commands import process_commands
 
 def main():
     #connect to database
     try:
-        conn = psycopg2.connect("dbname=threads user='{}' host='{}' password='{}'".format(config("DATABASE_USERNAME"), config("HOST"), config("PASSWORD")))
+        conn = psycopg2.connect("dbname={} user='{}' host='{}' password='{}'".format(config("DATABASE"), config("DATABASE_USERNAME"), config("HOST"), config("PASSWORD")))
         print('Connected to Database')
     except:
         print('failed to connect, exiting')
