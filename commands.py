@@ -27,9 +27,10 @@ def print_commands():
     print("\t\tlogout - switch users")
     print("\t\tquit - exit program")
 
-def display_threads(posts, user):
+def display_threads(posts, user, order_by, ascending, page):
     print("\n{:75}{:>75}".format("THREADS", "Logged in as: " + user))
     print("-" * 150)
+
     if posts:
         print("{:^5}|{:^50}|{:^50}|{:^12}|{:^30}".format("ID", "Title", "Body", "Date", "User"))
         print("-" * 150)
@@ -43,6 +44,13 @@ def display_threads(posts, user):
             date = f'{post[3].month}/{post[3].day}/{post[3].year}'
 
             print("{:^5}|{:^50}|{:^50}|{:^12}|{:^30}".format(post[0], title, body, date, post[4]))
+
+        print("-" * 150)
+        if ascending:
+            asc_text = "ASC"
+        else:
+            asc_text = "DESC"
+        print("{:8}{:>15}{:>5}{}{:>70}{:>5}".format("Sort by:", order_by + ',', asc_text, " " * 47 , "Page", page + 1))
     else:
         print("Nothing to show yet")
 
@@ -63,7 +71,7 @@ def change_order(order_by, user_input):
     elif user_input == "date":
         return True, 'date_created'
     else:
-        print("Please provide a valid sorting method(Title or date)")
+        print("Please provide a valid sorting method(Title or date) in the format: sort [method].")
         return False, order_by
         
 
@@ -87,7 +95,7 @@ def process_commands(cur, user):
     order_by = 'date_created'
     cur.execute(sql.SQL("SELECT * FROM posts ORDER BY {} DESC LIMIT 10 OFFSET %s;").format(sql.Identifier(order_by)), (page * 10, ))
     posts = cur.fetchall()
-    display_threads(posts, user)
+    display_threads(posts, user, order_by, ascending, page)
 
 
     while True:
@@ -99,7 +107,7 @@ def process_commands(cur, user):
         if user_input == 'help':
             print_commands()
         elif user_input == 'list':
-            display_threads(posts, user)
+            display_threads(posts, user, order_by, ascending, page)
         elif user_input == 'create':
             create_post(cur, user)
             posts = update_list(cur, order_by, page, ascending)
@@ -110,11 +118,11 @@ def process_commands(cur, user):
             success, order_by = change_order(order_by, user_input[5:].strip().lower())
             if success:
                 posts = update_list(cur, order_by, page, ascending)
-                display_threads(posts, user)
+                display_threads(posts, user, order_by, ascending, page)
         elif user_input == "flip":
             ascending = not ascending
             posts = update_list(cur, order_by, page, ascending)
-            display_threads(posts, user)
+            display_threads(posts, user, order_by, ascending, page)
         elif user_input == "deluser":
             user = delete_user(cur, user)
             if not user:
