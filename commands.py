@@ -1,7 +1,7 @@
 from psycopg2 import sql
 from authentication import get_user, delete_user
 from thread_commands import create_post, delete_post
-from query_commands import get_order, get_page
+from query_commands import get_order, get_page, get_query, get_from_user
 
 def print_commands():
     print("Commands:")
@@ -20,23 +20,32 @@ def print_commands():
     print("\t\tsort [method] - reorder threads by method(title or date)")
     print("\t\tflip - change ordering from ascending to descending and vice versa")
     print("\t\tpage [page number] - go to page of threads(leave empty to go to next page)")
-    print("\t\tsearch [query] - search for thread")
+    print("\t\tsearch [query] - search for thread by title, enter nothing to clear query")
+    print("\t\tfromuser [user] - filter threads by user, enter nothing to clear query")
 
     print("\tUser Query(commands will display users):")
     print("\t\tflipusers - change ordering from ascending to descending and vice versa")
     print("\t\tpageusers [page number] - go to page of threads(leave empty to go to next page)")
-    print("\t\tsearchusers [query] - search for thread")
+    print("\t\tsearchusers [query] - search for user")
 
     print("\tSystem:")
     print("\t\tdeluser - delete current account")
     print("\t\tlogout - switch users")
     print("\t\tquit - exit program")
 
-def display_threads(posts, user, order_by, ascending, page):
+def display_threads(posts, user, order_by, ascending, page, query, from_user):
+    #print header
     print("\n{:75}{:>75}".format("THREADS", "Logged in as: " + user))
     print("-" * 150)
-
+    #print queries
+    if query or from_user:
+        query_text = query if query else 'None'
+        from_user_text = from_user if from_user else 'All'
+        print("{:75}{:>75}".format("Search: " + query_text, "From user: " + from_user_text))
+        print("-" * 150)
+    
     if posts:
+        #print posts
         print("{:^5}|{:^50}|{:^50}|{:^12}|{:^30}".format("ID", "Title", "Body", "Date", "User"))
         print("-" * 150)
         for post in posts:
@@ -49,8 +58,8 @@ def display_threads(posts, user, order_by, ascending, page):
             date = f'{post[3].month}/{post[3].day}/{post[3].year}'
 
             print("{:^5}|{:^50}|{:^50}|{:^12}|{:^30}".format(post[0], title, body, date, post[4]))
-
         print("-" * 150)
+        #print filter
         if ascending:
             asc_text = "ASC"
         else:
@@ -96,8 +105,10 @@ def process_commands(cur, user):
     page = 1
     ascending = False
     order_by = 'date_created'
+    query = ''
+    from_user = ''
     posts = update_posts(cur, order_by, page, ascending)
-    display_threads(posts, user, order_by, ascending, page)
+    display_threads(posts, user, order_by, ascending, page, query, from_user)
 
     #initial settings of user list
     users_ascending = True
@@ -115,7 +126,7 @@ def process_commands(cur, user):
         if user_input == 'help':
             print_commands()
         elif user_input == 'list':
-            display_threads(posts, user, order_by, ascending, page)
+            display_threads(posts, user, order_by, ascending, page, query, from_user)
         elif user_input == 'users':
             display_users(users, users_page, users_ascending)
         #threads
@@ -130,16 +141,26 @@ def process_commands(cur, user):
             success, order_by = get_order(order_by, user_input[5:].strip().lower())
             if success:
                 posts = update_posts(cur, order_by, page, ascending)
-                display_threads(posts, user, order_by, ascending, page)
+                display_threads(posts, user, order_by, ascending, page, query, from_user)
         elif user_input == "flip":
             ascending = not ascending
             posts = update_posts(cur, order_by, page, ascending)
-            display_threads(posts, user, order_by, ascending, page)
+            display_threads(posts, user, order_by, ascending, page, query, from_user)
         elif user_input[:5].strip() == "page":
             success, page = get_page(cur, page, user_input[5:].strip())
             if success:
                 posts = update_posts(cur, order_by, page, ascending)
-                display_threads(posts, user, order_by, ascending, page)
+                display_threads(posts, user, order_by, ascending, page, query, from_user)
+        elif user_input[:7].strip() == 'search':
+            success, query = get_query(query, user_input[7:].strip())
+            if success:
+                posts = update_posts(cur, order_by, page, ascending)
+                display_threads(posts, user, order_by, ascending, page, query, from_user)
+        elif user_input[:9].strip() == 'fromuser':
+            success, from_user = get_from_user(cur, from_user, user_input[9:].strip())
+            if success:
+                posts = update_posts(cur, order_by, page, ascending)
+                display_threads(posts, user, order_by, ascending, page, query, from_user)
         #user query
         elif user_input == "flipusers":
             users_ascending = not users_ascending
@@ -154,9 +175,11 @@ def process_commands(cur, user):
                 posts = update_posts(cur, order_by, page, ascending)
                 users = update_users(cur, users_page, users_ascending)
                 if user:
-                    display_threads(posts, user, order_by, ascending, page)
+                    display_threads(posts, user, order_by, ascending, page, query, from_user)
         elif user_input == 'logout':
             user = get_user(cur)
+            if user:
+                    display_threads(posts, user, order_by, ascending, page, query, from_user)
         elif user_input == 'quit':
             break
         else:

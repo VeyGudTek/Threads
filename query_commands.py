@@ -26,3 +26,31 @@ def get_order(order_by, user_input):
     else:
         print("Please provide a valid sorting method(Title or date) in the format: sort [method].")
         return False, order_by
+
+def get_query(cur_query, user_input):
+    if len(user_input) > 65:
+        print("Query is too long.")
+        return False, ''
+    elif not cur_query and not user_input:
+        print('Search already cleared. If you want to perform a search, provide a query in the format: search [query]')
+        return False, user_input
+    else:
+        return True, user_input
+
+def get_from_user(cur, cur_from_user, user_input):
+    if not user_input and not cur_from_user:
+        print('User already cleared. If you want to filter by user, provide a user in the format: fromuser [user]')
+        return False, user_input
+    elif not user_input:
+        return True, user_input
+
+    cur.execute('SELECT username FROM users WHERE username ILIKE %s', (user_input, ))
+    results = cur.fetchone()
+
+    if results:
+        return True, results[0]
+    else:
+        print(f'No user called "{user_input}"')
+        return False, ''
+    
+    
