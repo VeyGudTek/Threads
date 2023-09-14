@@ -108,6 +108,17 @@ def login(cur):
         else:
             print('Incorrect Password. Try again or enter "*" to go back\n ')
 
+def delete_user(cur, user):
+    confirmation = input('Are you sure you want to delete your account? Enter "Y" to confirm. Enter anything else to cancel: ').strip().upper()
+    if confirmation == "Y":
+        cur.execute("DELETE FROM posts WHERE author = %s", (user, ))
+        cur.execute("DELETE FROM users WHERE username = %s", (user, ))
+        print("Account successfully deleted. ")
+        return ""
+    else:
+        print("Account deletiong canceled.")
+        return user
+
 def get_user(cur):
     user = ""
     while True:

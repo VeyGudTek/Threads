@@ -1,9 +1,7 @@
 from psycopg2 import sql
-from authentication import get_user
+from authentication import get_user, delete_user
 from thread_commands import create_post, delete_post
-
-import math
-
+from query_commands import get_order, get_page
 
 def print_commands():
     print("Commands:")
@@ -75,45 +73,6 @@ def display_users(users, users_page, users_ascending):
             asc_text = "DESC"
     print("{:8}{:>5}{:>17}{:>5}".format("Sort by:", asc_text, "Page", users_page))
 
-
-def delete_user(cur, user):
-    confirmation = input('Are you sure you want to delete your account? Enter "Y" to confirm. Enter anything else to cancel: ').strip().upper()
-    if confirmation == "Y":
-        cur.execute("DELETE FROM posts WHERE author = %s", (user, ))
-        cur.execute("DELETE FROM users WHERE username = %s", (user, ))
-        print("Account successfully deleted. ")
-        return ""
-    else:
-        print("Account deletiong canceled.")
-        return user
-
-def get_page(cur, page, user_input):
-    cur.execute("SELECT COUNT(*) FROM posts;")
-    max_pages = math.ceil(cur.fetchone()[0]/10)
-
-    if not user_input and page < max_pages:
-        return True, page + 1
-    elif not user_input:
-        print("You are already on the last page.")
-        return False, page
-    elif not user_input.isdigit():
-        print("Please enter a valid page number.")
-        return False, page
-    elif int(user_input) > max_pages:
-        return True, max_pages
-    else:
-        return True, int(user_input)
-    
-
-def get_order(order_by, user_input):
-    if user_input == "title":
-        return True, 'title'
-    elif user_input == "date":
-        return True, 'date_created'
-    else:
-        print("Please provide a valid sorting method(Title or date) in the format: sort [method].")
-        return False, order_by
-
 def update_posts(cur, order_by, page, ascending):
     if ascending:
         cur.execute(sql.SQL("SELECT * FROM posts ORDER BY {} ASC LIMIT 10 OFFSET %s;").format(sql.Identifier(order_by)), ((page - 1) * 10, ))
@@ -179,7 +138,7 @@ def process_commands(cur, user):
         elif user_input[:5].strip() == "page":
             success, page = get_page(cur, page, user_input[5:].strip())
             if success:
-                update_posts(cur, order_by, page, ascending)
+                posts = update_posts(cur, order_by, page, ascending)
                 display_threads(posts, user, order_by, ascending, page)
         #user query
         elif user_input == "flipusers":
@@ -193,6 +152,9 @@ def process_commands(cur, user):
                 print()
                 user = get_user(cur)
                 posts = update_posts(cur, order_by, page, ascending)
+                users = update_users(cur, users_page, users_ascending)
+                if user:
+                    display_threads(posts, user, order_by, ascending, page)
         elif user_input == 'logout':
             user = get_user(cur)
         elif user_input == 'quit':
