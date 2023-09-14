@@ -23,6 +23,7 @@ def print_commands():
     print("\t\tsearch [query] - search for thread")
 
     print("\tSystem:")
+    print("\t\tdeluser - delete current account")
     print("\t\tlogout - switch users")
     print("\t\tquit - exit program")
 
@@ -45,9 +46,34 @@ def display_threads(posts, user):
     else:
         print("Nothing to show yet")
 
-def update_list(cur, order_by, page):
+def delete_user(cur, user):
+    confirmation = input('Are you sure you want to delete your account? Enter "Y" to confirm. Enter anything else to cancel: ').strip().upper()
+    if confirmation == "Y":
+        cur.execute("DELETE FROM posts WHERE author = %s", (user, ))
+        cur.execute("DELETE FROM users WHERE username = %s", (user, ))
+        print("Account successfully deleted. ")
+        return ""
+    else:
+        print("Account deletiong canceled.")
+        return user
+
+def change_order(order_by, user_input):
+    if user_input == "title":
+        return True, 'title'
+    elif user_input == "date":
+        return True, 'date_created'
+    else:
+        print("Please provide a valid sorting method(Title or date)")
+        return False, order_by
+        
+
+
+def update_list(cur, order_by, page, ascending):
     #THIS IS NOT FULLY IMPLEMENTED YET
-    cur.execute(sql.SQL("SELECT * FROM posts ORDER BY {} DESC LIMIT 10 OFFSET %s;").format(sql.Identifier(order_by)), (page * 10, ))
+    if ascending:
+        cur.execute(sql.SQL("SELECT * FROM posts ORDER BY {} ASC LIMIT 10 OFFSET %s;").format(sql.Identifier(order_by)), (page * 10, ))
+    else:
+        cur.execute(sql.SQL("SELECT * FROM posts ORDER BY {} DESC LIMIT 10 OFFSET %s;").format(sql.Identifier(order_by)), (page * 10, ))
     return cur.fetchall()
 
 def process_commands(cur, user):
@@ -57,6 +83,7 @@ def process_commands(cur, user):
 
     #initial settings and display
     page = 0
+    ascending = False
     order_by = 'date_created'
     cur.execute(sql.SQL("SELECT * FROM posts ORDER BY {} DESC LIMIT 10 OFFSET %s;").format(sql.Identifier(order_by)), (page * 10, ))
     posts = cur.fetchall()
@@ -65,6 +92,8 @@ def process_commands(cur, user):
 
     while True:
         print()
+        if not user:
+                break
         user_input = input("Enter a Command: ").strip()
 
         if user_input == 'help':
@@ -73,14 +102,27 @@ def process_commands(cur, user):
             display_threads(posts, user)
         elif user_input == 'create':
             create_post(cur, user)
-            posts = update_list(cur, order_by, page)
+            posts = update_list(cur, order_by, page, ascending)
         elif user_input[:7].strip() == 'delete':
             delete_post(cur, user_input[7:].strip(), user)
-            posts = update_list(cur, order_by, page)
+            posts = update_list(cur, order_by, page, ascending)
+        elif user_input[:5].strip() == "sort":
+            success, order_by = change_order(order_by, user_input[5:].strip().lower())
+            if success:
+                posts = update_list(cur, order_by, page, ascending)
+                display_threads(posts, user)
+        elif user_input == "flip":
+            ascending = not ascending
+            posts = update_list(cur, order_by, page, ascending)
+            display_threads(posts, user)
+        elif user_input == "deluser":
+            user = delete_user(cur, user)
+            if not user:
+                print()
+                user = get_user(cur)
+                posts = update_list(cur, order_by, page, ascending)
         elif user_input == 'logout':
             user = get_user(cur)
-            if not user:
-                break
         elif user_input == 'quit':
             break
         else:
