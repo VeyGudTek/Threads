@@ -2,6 +2,8 @@ from psycopg2 import sql
 from authentication import get_user
 from thread_commands import create_post, delete_post
 
+import math
+
 
 def print_commands():
     print("Commands:")
@@ -50,7 +52,7 @@ def display_threads(posts, user, order_by, ascending, page):
             asc_text = "ASC"
         else:
             asc_text = "DESC"
-        print("{:8}{:>15}{:>5}{}{:>70}{:>5}".format("Sort by:", order_by + ',', asc_text, " " * 47 , "Page", page + 1))
+        print("{:8}{:>15}{:>5}{}{:>70}{:>5}".format("Sort by:", order_by + ',', asc_text, " " * 47 , "Page", page))
     else:
         print("Nothing to show yet")
 
@@ -65,7 +67,25 @@ def delete_user(cur, user):
         print("Account deletiong canceled.")
         return user
 
-def change_order(order_by, user_input):
+def get_page(cur, page, user_input):
+    cur.execute("SELECT COUNT(*) FROM posts;")
+    max_pages = math.ceil(cur.fetchone()[0]/10)
+
+    if not user_input and page < max_pages:
+        return True, page + 1
+    elif not user_input:
+        print("You are already on the last page.")
+        return False, page
+    elif not user_input.isdigit():
+        print("Please enter a valid page number.")
+        return False, page
+    elif int(user_input) > max_pages:
+        return True, max_pages
+    else:
+        return True, int(user_input)
+    
+
+def get_order(order_by, user_input):
     if user_input == "title":
         return True, 'title'
     elif user_input == "date":
@@ -79,9 +99,9 @@ def change_order(order_by, user_input):
 def update_list(cur, order_by, page, ascending):
     #THIS IS NOT FULLY IMPLEMENTED YET
     if ascending:
-        cur.execute(sql.SQL("SELECT * FROM posts ORDER BY {} ASC LIMIT 10 OFFSET %s;").format(sql.Identifier(order_by)), (page * 10, ))
+        cur.execute(sql.SQL("SELECT * FROM posts ORDER BY {} ASC LIMIT 10 OFFSET %s;").format(sql.Identifier(order_by)), ((page - 1) * 10, ))
     else:
-        cur.execute(sql.SQL("SELECT * FROM posts ORDER BY {} DESC LIMIT 10 OFFSET %s;").format(sql.Identifier(order_by)), (page * 10, ))
+        cur.execute(sql.SQL("SELECT * FROM posts ORDER BY {} DESC LIMIT 10 OFFSET %s;").format(sql.Identifier(order_by)), ((page - 1) * 10, ))
     return cur.fetchall()
 
 def process_commands(cur, user):
@@ -90,10 +110,10 @@ def process_commands(cur, user):
         return
 
     #initial settings and display
-    page = 0
+    page = 1
     ascending = False
     order_by = 'date_created'
-    cur.execute(sql.SQL("SELECT * FROM posts ORDER BY {} DESC LIMIT 10 OFFSET %s;").format(sql.Identifier(order_by)), (page * 10, ))
+    cur.execute(sql.SQL("SELECT * FROM posts ORDER BY {} DESC LIMIT 10 OFFSET %s;").format(sql.Identifier(order_by)), ((page - 1) * 10, ))
     posts = cur.fetchall()
     display_threads(posts, user, order_by, ascending, page)
 
@@ -102,7 +122,7 @@ def process_commands(cur, user):
         print()
         if not user:
                 break
-        user_input = input("Enter a Command: ").strip()
+        user_input = input("Enter a Command: ").strip().lower()
 
         if user_input == 'help':
             print_commands()
@@ -115,7 +135,7 @@ def process_commands(cur, user):
             delete_post(cur, user_input[7:].strip(), user)
             posts = update_list(cur, order_by, page, ascending)
         elif user_input[:5].strip() == "sort":
-            success, order_by = change_order(order_by, user_input[5:].strip().lower())
+            success, order_by = get_order(order_by, user_input[5:].strip().lower())
             if success:
                 posts = update_list(cur, order_by, page, ascending)
                 display_threads(posts, user, order_by, ascending, page)
@@ -123,6 +143,11 @@ def process_commands(cur, user):
             ascending = not ascending
             posts = update_list(cur, order_by, page, ascending)
             display_threads(posts, user, order_by, ascending, page)
+        elif user_input[:5].strip() == "page":
+            success, page = get_page(cur, page, user_input[5:].strip())
+            if success:
+                update_list(cur, order_by, page, ascending)
+                display_threads(posts, user, order_by, ascending, page)
         elif user_input == "deluser":
             user = delete_user(cur, user)
             if not user:
