@@ -48,12 +48,14 @@ def register(cur):
 
         cur.execute('SELECT * FROM users WHERE username ILIKE (%s);', (user_input, ))
         existing = cur.fetchone()
-        if is_alnum_with_underscore(user_input) and not existing:
+        if existing:
+            print("Username already taken.")
+        elif len(user_input) > 30:
+            print('Username is too long. Please enter a valid username or "*" to go back \n')
+        elif user_input and is_alnum_with_underscore(user_input):
             username = user_input
             break
         else:
-            if existing:
-                print('Username already taken.')
             print('Please enter a valid username or "*" to go back \n')
 
     #Create Password
