@@ -1,7 +1,8 @@
 from psycopg2 import sql
+from user_commands import process_user_commands
 from authentication import get_user, delete_user
 from thread_commands import create_post, delete_post
-from query_commands import get_order, get_page, get_query, get_from_user, get_page_users, get_query_users
+from query_commands import get_order, get_page, get_query, get_from_user
 
 def print_commands():
     print("Commands:")
@@ -9,7 +10,7 @@ def print_commands():
     print("\tDisplay:")
     print("\t\thelp - print commands")
     print("\t\tlist - display threads")
-    print("\t\tusers - display users")
+    print("\t\tusers - open users interface")
 
     print("\tThreads:")
     print("\t\topen [thread id] -   view a thread")
@@ -23,12 +24,6 @@ def print_commands():
     print("\t\tsearch [query] -     search for thread by title, enter nothing to clear query")
     print("\t\tfrom [user] -        filter threads by user, enter nothing to clear query")
     print("\t\tclr -                removes both search and fromuser query")
-
-    print("\tUser Query(commands will display users):")
-    print("\t\tflipusers -                  change ordering from ascending to descending and vice versa")
-    print("\t\tpageusers [page number] -    go to page of threads(leave empty to go to next page)")
-    print("\t\tsearchusers [query] -        search for user")
-    print("\t\tclrusers -                   removes searchusers query")
 
     print("\tSystem:")
     print("\t\tdeluser -    delete current account")
@@ -71,24 +66,6 @@ def display_threads(posts, user, order_by, ascending, page, query, from_user):
         asc_text = "DESC"
     print("{:8}{:>15}{:>5}{}{:>70}{:>5}".format("Sort by:", order_by + ',', asc_text, " " * 47 , "Page", page))
 
-def display_users(users, users_page, users_ascending, users_query):
-    print("\n{:^35}".format('USERS'))
-    print("-" * 35)
-
-    if users_query:
-        print(f"Search: {users_query}")
-        print("-" * 35)
-    
-    for user in users:
-        print("{:^35}".format(user[0]))
-    
-    print("-" * 35)
-    if users_ascending:
-            asc_text = "ASC"
-    else:
-            asc_text = "DESC"
-    print("{:8}{:>5}{:>17}{:>5}".format("Sort by:", asc_text, "Page", users_page))
-
 def update_posts(cur, order_by, page, ascending, query, from_user):
     query_text = "%" + query + "%"
     from_user_text = from_user if from_user else "%%"
@@ -97,15 +74,6 @@ def update_posts(cur, order_by, page, ascending, query, from_user):
         cur.execute(sql.SQL("SELECT * FROM posts WHERE title ILIKE %s AND author ILIKE %s ORDER BY {} ASC LIMIT 10 OFFSET %s;").format(sql.Identifier(order_by)), (query_text, from_user_text, (page - 1) * 10))
     else:
         cur.execute(sql.SQL("SELECT * FROM posts WHERE title ILIKE %s AND author ILIKE %s ORDER BY {} DESC LIMIT 10 OFFSET %s;").format(sql.Identifier(order_by)), (query_text, from_user_text, (page - 1) * 10))
-    return cur.fetchall()
-
-def update_users(cur, users_page, users_ascending, users_query):
-    query_text = "%" + users_query + "%"
-
-    if users_ascending:
-        cur.execute(sql.SQL("SELECT username FROM users WHERE username ILIKE %s ORDER BY {} ASC LIMIT 10 OFFSET %s;").format(sql.Identifier('username')), (query_text, (users_page - 1) * 10))
-    else:
-        cur.execute(sql.SQL("SELECT username FROM users WHERE username ILIKE %s ORDER BY {} DESC LIMIT 10 OFFSET %s;").format(sql.Identifier('username')), (query_text, (users_page - 1) * 10))
     return cur.fetchall()
 
 def process_commands(cur, user):
@@ -122,13 +90,6 @@ def process_commands(cur, user):
     posts = update_posts(cur, order_by, page, ascending, query, from_user)
     display_threads(posts, user, order_by, ascending, page, query, from_user)
 
-    #initial settings of user list
-    users_ascending = True
-    users_page = 1
-    users_query = ''
-    users = update_users(cur, users_page, users_ascending, users_query)
-
-
     while True:
         print()
         if not user:
@@ -142,7 +103,7 @@ def process_commands(cur, user):
             posts = update_posts(cur, order_by, page, ascending, query, from_user)
             display_threads(posts, user, order_by, ascending, page, query, from_user)
         elif user_input == 'users':
-            display_users(users, users_page, users_ascending, users_query)
+            process_user_commands(cur)
         #threads
         elif user_input == 'create':
             create_post(cur, user)
@@ -182,27 +143,6 @@ def process_commands(cur, user):
             page = 1
             posts = update_posts(cur, order_by, page, ascending, query, from_user)
             display_threads(posts, user, order_by, ascending, page, query, from_user)
-        #user query
-        elif user_input == "flipusers":
-            users_ascending = not users_ascending
-            users = update_users(cur, users_page, users_ascending, users_query)
-            display_users(users, users_page, users_ascending, users_query)
-        elif user_input[:10].strip() == "pageusers":
-            success, users_page = get_page_users(cur, users_page, user_input[10:].strip(), users_query)
-            if success:
-                users = update_users(cur, users_page, users_ascending, users_query)
-                display_users(users, users_page, users_ascending, users_query)
-        elif user_input[:12].strip() == "searchusers":
-            success, users_query = get_query_users(users_query, user_input[12:].strip())
-            if success:
-                users_page = 1
-                users = update_users(cur, users_page, users_ascending, users_query)
-                display_users(users, users_page, users_ascending, users_query)
-        elif user_input == "clrusers":
-            users_query = ''
-            users_page = 1
-            users = update_users(cur, users_page, users_ascending, users_query)
-            display_users(users, users_page, users_ascending, users_query)
         #system
         elif user_input == "deluser":
             user = delete_user(cur, user)
