@@ -60,5 +60,29 @@ def get_from_user(cur, cur_from_user, user_input):
     else:
         print(f'No user called "{user_input}"')
         return False, ''
+
+def get_page_users(cur, page, user_input, query):
+    query_text = "%" + query + "%"
+
+    cur.execute('SELECT COUNT(*) FROM users WHERE username ILIKE %s;', (query_text, ))
+    max_pages = math.ceil(cur.fetchone()[0]/10)
+
+    if not user_input and page < max_pages:
+        return True, page + 1
+    elif not user_input:
+        print("You are already on (or past) the last page.")
+        print("To jump to a certain page, provide a page number in the format: page [page number]")
+        print("To jump to the last page, enter an arbitrarily large number for [page number]")
+        return False, max_pages
+    elif not user_input.isdigit():
+        print("Please enter a valid page number.")
+        return False, page
+    elif int(user_input) < 1:
+        print("Please enter a valid page number.")
+        return False, page
+    elif int(user_input) > max_pages:
+        return True, max_pages
+    else:
+        return True, int(user_input)
     
     

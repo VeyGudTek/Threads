@@ -1,7 +1,7 @@
 from psycopg2 import sql
 from authentication import get_user, delete_user
 from thread_commands import create_post, delete_post
-from query_commands import get_order, get_page, get_query, get_from_user
+from query_commands import get_order, get_page, get_query, get_from_user, get_page_users
 
 def print_commands():
     print("Commands:")
@@ -21,13 +21,14 @@ def print_commands():
     print("\t\tflip -               change ordering from ascending to descending and vice versa")
     print("\t\tpage [page number] - go to page of threads(leave empty to go to next page)")
     print("\t\tsearch [query] -     search for thread by title, enter nothing to clear query")
-    print("\t\tfrom [user] -    filter threads by user, enter nothing to clear query")
-    print("\t\tclr -           removes both search and fromuser query")
+    print("\t\tfrom [user] -        filter threads by user, enter nothing to clear query")
+    print("\t\tclr -                removes both search and fromuser query")
 
     print("\tUser Query(commands will display users):")
     print("\t\tflipusers -                  change ordering from ascending to descending and vice versa")
     print("\t\tpageusers [page number] -    go to page of threads(leave empty to go to next page)")
     print("\t\tsearchusers [query] -        search for user")
+    print("\t\tclrusers -                   removes searchusers query")
 
     print("\tSystem:")
     print("\t\tdeluser -    delete current account")
@@ -118,6 +119,7 @@ def process_commands(cur, user):
     #initial settings of user list
     users_ascending = True
     users_page = 1
+    users_query = ''
     users = update_users(cur, users_page, users_ascending)
 
 
@@ -179,25 +181,36 @@ def process_commands(cur, user):
             users_ascending = not users_ascending
             users = update_users(cur, users_page, users_ascending)
             display_users(users, users_page, users_ascending)
+        elif user_input[:10].strip() == "pageusers":
+            success, users_page = get_page_users(cur, users_page, user_input[10:].strip(), users_query)
+            if success:
+                users = update_users(cur, users_page, users_ascending)
+                display_users(users, users_page, users_ascending)
         #system
         elif user_input == "deluser":
             user = delete_user(cur, user)
             if not user:
                 print()
                 user = get_user(cur)
-                if user:
+                if user:                #Reset queries and filters
                     from_user = ''
                     query = ''
                     page = 1
+                    users_ascending = True
+                    users_page = 1
+                    users_query = ''
                     posts = update_posts(cur, order_by, page, ascending, query, from_user)
                     users = update_users(cur, users_page, users_ascending)
                     display_threads(posts, user, order_by, ascending, page, query, from_user)
         elif user_input == 'logout':
             user = get_user(cur)
-            if user:
+            if user:                    #Reset queries and filters
                     from_user = ''
                     query = ''
                     page = 1
+                    users_ascending = True
+                    users_page = 1
+                    users_query = ''
                     posts = update_posts(cur, order_by, page, ascending, query, from_user)
                     display_threads(posts, user, order_by, ascending, page, query, from_user)
         elif user_input == 'quit':
