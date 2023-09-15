@@ -1,7 +1,7 @@
 from psycopg2 import sql
 from user_commands import process_user_commands
 from authentication import get_user, delete_user
-from thread_commands import create_post, delete_post
+from thread_commands import create_post, delete_post, view_post
 from query_commands import get_order, get_page, get_query, get_from_user
 
 def print_commands():
@@ -105,6 +105,8 @@ def process_commands(cur, user):
         elif user_input == 'users':
             process_user_commands(cur)
         #threads
+        elif user_input[:5].strip() == 'open':
+            view_post(cur, user_input[5:].strip())
         elif user_input == 'create':
             create_post(cur, user)
         elif user_input[:7].strip() == 'delete':

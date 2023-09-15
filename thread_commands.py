@@ -1,4 +1,5 @@
 import datetime
+import math
 import psycopg2
 
 def has_letter(text):
@@ -70,3 +71,31 @@ def delete_post(cur, id, user):
 
     cur.execute('DELETE FROM posts WHERE id = %s', (id, ))
     print("Post successfully deleted.")
+
+def view_post(cur, id):
+    if not id:
+        print("Please include the id of the post you want to view in the format: open [id]")
+        return
+    if not id.isdigit():
+        print(id, "is not a valid id")
+        return
+    id = int(id)
+
+    cur.execute('SELECT * FROM posts WHERE id = %s', (id, ))
+    post = cur.fetchone()
+    if not post:
+        print('There is no post with id:', id)
+        return
+
+    #print header
+    print()
+    print(post[1])
+    date_text = f'{post[3].month}/{post[3].day}/{post[3].year}'
+    print("{:35}{:>20}".format("By: " + post[4], "Created: " + date_text))
+    print("-" * 55)
+
+    num_rows = math.ceil(len(post[2])/55)
+    num_character = 0
+    for i in range(num_rows):
+        print(post[2][num_character:num_character+50])
+        num_character += 50
