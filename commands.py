@@ -21,8 +21,8 @@ def print_commands():
     print("\t\tflip -               change ordering from ascending to descending and vice versa")
     print("\t\tpage [page number] - go to page of threads(leave empty to go to next page)")
     print("\t\tsearch [query] -     search for thread by title, enter nothing to clear query")
-    print("\t\tfromuser [user] -    filter threads by user, enter nothing to clear query")
-    print("\t\tclrquery -           removes both search and fromuser query")
+    print("\t\tfrom [user] -    filter threads by user, enter nothing to clear query")
+    print("\t\tclr -           removes both search and fromuser query")
 
     print("\tUser Query(commands will display users):")
     print("\t\tflipusers -                  change ordering from ascending to descending and vice versa")
@@ -162,13 +162,13 @@ def process_commands(cur, user):
                 page = 1
                 posts = update_posts(cur, order_by, page, ascending, query, from_user)
                 display_threads(posts, user, order_by, ascending, page, query, from_user)
-        elif user_input[:9].strip() == 'fromuser':
-            success, from_user = get_from_user(cur, from_user, user_input[9:].strip())
+        elif user_input[:5].strip() == 'from':
+            success, from_user = get_from_user(cur, from_user, user_input[5:].strip())
             if success:
                 page = 1
                 posts = update_posts(cur, order_by, page, ascending, query, from_user)
                 display_threads(posts, user, order_by, ascending, page, query, from_user)
-        elif user_input == 'clrquery':
+        elif user_input == 'clr':
             from_user = ''
             query = ''
             page = 1
