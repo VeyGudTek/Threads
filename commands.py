@@ -131,16 +131,16 @@ def process_commands(cur, user):
         if user_input == 'help':
             print_commands()
         elif user_input == 'list':
+            posts = update_posts(cur, order_by, page, ascending, query, from_user)
             display_threads(posts, user, order_by, ascending, page, query, from_user)
         elif user_input == 'users':
             display_users(users, users_page, users_ascending)
         #threads
         elif user_input == 'create':
             create_post(cur, user)
-            posts = update_posts(cur, order_by, page, ascending, query, from_user)
         elif user_input[:7].strip() == 'delete':
             delete_post(cur, user_input[7:].strip(), user)
-            posts = update_posts(cur, order_by, page, ascending, query, from_user)
+            _, page = get_page(cur, page, str(page), query, from_user)
         #thread query
         elif user_input[:5].strip() == "sort":
             success, order_by = get_order(order_by, user_input[5:].strip().lower())
@@ -185,13 +185,20 @@ def process_commands(cur, user):
             if not user:
                 print()
                 user = get_user(cur)
-                posts = update_posts(cur, order_by, page, ascending, query, from_user)
-                users = update_users(cur, users_page, users_ascending)
                 if user:
+                    from_user = ''
+                    query = ''
+                    page = 1
+                    posts = update_posts(cur, order_by, page, ascending, query, from_user)
+                    users = update_users(cur, users_page, users_ascending)
                     display_threads(posts, user, order_by, ascending, page, query, from_user)
         elif user_input == 'logout':
             user = get_user(cur)
             if user:
+                    from_user = ''
+                    query = ''
+                    page = 1
+                    posts = update_posts(cur, order_by, page, ascending, query, from_user)
                     display_threads(posts, user, order_by, ascending, page, query, from_user)
         elif user_input == 'quit':
             break
