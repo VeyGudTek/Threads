@@ -84,5 +84,15 @@ def get_page_users(cur, page, user_input, query):
         return True, max_pages
     else:
         return True, int(user_input)
+
+def get_query_users(cur_query, user_input):
+    if len(user_input) > 30:
+        print("Usernames do not exceed 30 characters.")
+        return False, ''
+    elif not cur_query and not user_input:
+        print('Search already cleared. If you want to perform a search, provide a query in the format: searchusers [query]')
+        return False, user_input
+    else:
+        return True, user_input
     
     
