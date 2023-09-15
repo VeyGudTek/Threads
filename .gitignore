@@ -1,3 +1,4 @@
 .env
 /sandbox.py
 __pycache__/
+backups/
