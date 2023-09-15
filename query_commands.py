@@ -4,15 +4,20 @@ def get_page(cur, page, user_input, query, from_user):
     query_text = "%" + query + "%"
     from_user_text = from_user if from_user else "%%"
 
-    cur.execute('SELECT * FROM posts WHERE title ILIKE %s and author ILIKE %s;', (query_text, from_user_text))
-    max_pages = math.ceil(len(cur.fetchall())/10)
+    cur.execute('SELECT COUNT(*) FROM posts WHERE title ILIKE %s and author ILIKE %s;', (query_text, from_user_text))
+    max_pages = math.ceil(cur.fetchone()[0]/10)
 
     if not user_input and page < max_pages:
         return True, page + 1
     elif not user_input:
-        print("You are already on the last page.")
-        return False, page
+        print("You are already on (or past) the last page.")
+        print("To jump to a certain page, provide a page number in the format: page [page number]")
+        print("To jump to the last page, enter an arbitrarily large number for [page number]")
+        return False, max_pages
     elif not user_input.isdigit():
+        print("Please enter a valid page number.")
+        return False, page
+    elif int(user_input) < 1:
         print("Please enter a valid page number.")
         return False, page
     elif int(user_input) > max_pages:

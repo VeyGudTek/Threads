@@ -59,15 +59,16 @@ def display_threads(posts, user, order_by, ascending, page, query, from_user):
             date = f'{post[3].month}/{post[3].day}/{post[3].year}'
 
             print("{:^5}|{:^50}|{:^50}|{:^12}|{:^30}".format(post[0], title, body, date, post[4]))
-        print("-" * 150)
-        #print filter
-        if ascending:
-            asc_text = "ASC"
-        else:
-            asc_text = "DESC"
-        print("{:8}{:>15}{:>5}{}{:>70}{:>5}".format("Sort by:", order_by + ',', asc_text, " " * 47 , "Page", page))
     else:
         print("Nothing to show yet")
+    print("-" * 150)
+
+     #print filter
+    if ascending:
+        asc_text = "ASC"
+    else:
+        asc_text = "DESC"
+    print("{:8}{:>15}{:>5}{}{:>70}{:>5}".format("Sort by:", order_by + ',', asc_text, " " * 47 , "Page", page))
 
 def display_users(users, users_page, users_ascending):
     print("\n{:^35}".format('USERS'))
