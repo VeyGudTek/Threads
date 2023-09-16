@@ -8,11 +8,13 @@ CREATE TABLE posts (
     title VARCHAR(50) NOT NULL,
     body VARCHAR(1000) NOT NULL,
     date_created TIMESTAMP NOT NULL,
-    author VARCHAR(30) REFERENCES users(username)
+    author VARCHAR(30) REFERENCES users(username) NOT NULL
 );
 
-CREATE TABLE likes(
-    user VARCHAR(30) NOT NULL,
-    post BIGINT NOT NULL,
-    UNIQUE(user, post)
+CREATE TABLE replies(
+    id BIGSERIAL NOT NULL PRIMARY KEY,
+    body VARCHAR(500) NOT NULL,
+    author VARCHAR(30) REFERENCES users(username) NOT NULL,
+    parent_id BIGINT REFERENCES replies(id),
+    date_created TIMESTAMP NOT NULL
 );
