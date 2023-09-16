@@ -6,6 +6,7 @@ def get_page(cur, page, user_input, query, from_user):
 
     cur.execute('SELECT COUNT(*) FROM posts WHERE title ILIKE %s and author ILIKE %s;', (query_text, from_user_text))
     max_pages = math.ceil(cur.fetchone()[0]/10)
+    max_pages = 1 if max_pages < 1 else max_pages
 
     if not user_input and page < max_pages:
         return True, page + 1
