@@ -11,10 +11,11 @@ CREATE TABLE posts (
     author VARCHAR(30) REFERENCES users(username) NOT NULL
 );
 
-CREATE TABLE replies(
+CREATE TABLE comments(
     id BIGSERIAL NOT NULL PRIMARY KEY,
-    body VARCHAR(500) NOT NULL,
-    author VARCHAR(30) REFERENCES users(username) NOT NULL,
+    post_id BIGINT REFERENCES posts(id) NOT NULL,
     parent_id BIGINT REFERENCES replies(id),
+    author VARCHAR(30) REFERENCES users(username) NOT NULL,
+    body VARCHAR(500) NOT NULL,
     date_created TIMESTAMP NOT NULL
 );
