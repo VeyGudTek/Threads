@@ -2,6 +2,22 @@ import datetime
 import math
 import psycopg2
 
+def print_post_commands():
+    print("\nPost Commands:\n")
+
+    print("\tDisplay commands:")
+    print("\t\thelp - print commands")
+    print("\t\tshow - display thread")
+    print("\t\tlist - display comments")
+    print("\t\tflip - flip ordering of comments(ordered by date)")
+    print("\t\tpage [page number] - go to page of comments(leave empty to go to next page)")
+
+    print("\tReply commands:")
+    print("\t\treply [(optional) ID] - reply to post, or reply to reply with ID")
+    print("\t\tdelete [ID] - deletes reply(must be author of reply)")
+    
+    print("\tback - exit post")
+
 def has_letter(text):
     for ch in text:
         if ch.isalpha():
@@ -72,7 +88,22 @@ def delete_post(cur, id, user):
     cur.execute('DELETE FROM posts WHERE id = %s', (id, ))
     print("Post successfully deleted.")
 
-def view_post(cur, id):
+def view_post(post):
+    #print header
+    print()
+    print(post[1])
+    date_text = f'{post[3].month}/{post[3].day}/{post[3].year}'
+    print("{:35}{:>20}".format("By: " + post[4], "Created: " + date_text))
+    print("-" * 55)
+
+    num_rows = math.ceil(len(post[2])/55)
+    num_character = 0
+    for i in range(num_rows):
+        print(post[2][num_character:num_character+50])
+        num_character += 50
+
+def process_post_commands(cur, id):
+    #Check if ID is Valid
     if not id:
         print("Please include the id of the post you want to view in the format: open [id]")
         return
@@ -87,15 +118,18 @@ def view_post(cur, id):
         print('There is no post with id:', id)
         return
 
-    #print header
-    print()
-    print(post[1])
-    date_text = f'{post[3].month}/{post[3].day}/{post[3].year}'
-    print("{:35}{:>20}".format("By: " + post[4], "Created: " + date_text))
-    print("-" * 55)
+    #Print initial display
+    view_post(post)
 
-    num_rows = math.ceil(len(post[2])/55)
-    num_character = 0
-    for i in range(num_rows):
-        print(post[2][num_character:num_character+50])
-        num_character += 50
+    while True:
+        print()
+        user_input = input(f"(Post {id})Enter a Command: ").strip().lower()
+
+        if user_input == 'show':
+            view_post(post)
+        elif user_input == 'help':
+            print_post_commands()
+        elif user_input == 'back':
+            break
+        else:
+            print('Please enter a valid command(Enter "help" list of valid commands).')
