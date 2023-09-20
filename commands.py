@@ -106,7 +106,7 @@ def process_commands(cur, user):
             process_user_commands(cur)
         #threads
         elif user_input[:5].strip() == 'open':
-            process_post_commands(cur, user_input[5:].strip())
+            process_post_commands(cur, user_input[5:].strip(), user)
         elif user_input == 'create':
             create_post(cur, user)
         elif user_input[:7].strip() == 'delete':
