@@ -99,8 +99,19 @@ def view_post(post):
     num_rows = math.ceil(len(post[2])/55)
     num_character = 0
     for i in range(num_rows):
-        print(post[2][num_character:num_character+50])
-        num_character += 50
+        print(post[2][num_character:num_character+55])
+        num_character += 55
+
+def view_comments(comments):
+    for comment in comments:
+        date = f'{comment[3].month}/{comment[3].day}/{comment[3].year}'
+        print("\t" * comment[-1] + '|{:<5}{:30}{:>12}'.format(comment[0], comment[2], date))
+
+        num_rows = math.ceil(len(comment[1])/47)
+        num_character = 0
+        for i in range(num_rows):
+            print("\t" * comment[-1] + "|" + comment[1][num_character:num_character+50])
+            num_character += 50
 
 def create_comment(cur, post_id, user, comment_id):
     #Check User input
@@ -135,7 +146,25 @@ def create_comment(cur, post_id, user, comment_id):
         cur.execute('INSERT INTO comments (post_id, author, body, date_created) VALUES (%s, %s, %s, %s);', (post_id, user, body, current_date))
     print('comment Created.')
 
+def depth_first_search(cur, comment_id, post_id, comment_list, depth):
+    cur.execute("SELECT id, body, author, date_created FROM comments WHERE post_id = %s AND parent_id = %s ORDER BY date_created;", (post_id, comment_id))
+    temp_list = cur.fetchall()
 
+    for comment in temp_list:
+        comment_list.append(comment + (depth, ))
+        depth_first_search(cur, comment[0], post_id, comment_list, depth + 1)
+
+def get_comments(cur, id):
+    comment_list = []
+    depth = 0
+    cur.execute("SELECT id, body, author, date_created FROM comments WHERE post_id = %s AND parent_id IS NULL ORDER BY date_created;", (id,))
+    temp_list = cur.fetchall()
+
+    for comment in temp_list:
+        comment_list.append(comment + (depth, ))
+        depth_first_search(cur, comment[0], id, comment_list, depth + 1)
+    
+    return comment_list
 
 def process_post_commands(cur, id, user):
     #Check if ID is Valid
@@ -155,7 +184,7 @@ def process_post_commands(cur, id, user):
 
     #Print initial display
     view_post(post)
-
+    comments = get_comments(cur, id)
     while True:
         print()
         user_input = input(f"(Post {id})Enter a Command: ").strip().lower()
@@ -164,8 +193,11 @@ def process_post_commands(cur, id, user):
             view_post(post)
         elif user_input == 'help':
             print_post_commands()
+        elif user_input == 'list':
+            view_comments(comments)
         elif user_input[:8].strip() == 'comment':
             create_comment(cur, id, user, user_input[8:].strip())
+            comments = get_comments(cur, id)
         elif user_input == 'back':
             break
         else:
