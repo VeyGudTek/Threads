@@ -1,6 +1,5 @@
 import datetime
 import math
-import psycopg2
 
 def print_post_commands():
     print("\nPost Commands:\n")
@@ -102,16 +101,24 @@ def view_post(post):
         print(post[2][num_character:num_character+55])
         num_character += 55
 
-def view_comments(comments):
-    for comment in comments:
-        date = f'{comment[3].month}/{comment[3].day}/{comment[3].year}'
-        print("\t" * comment[-1] + '|{:<5}{:30}{:>12}'.format(comment[0], comment[2], date))
+def view_comments(comments, page, ascending):
+    if not comments:
+        print("No Comments Yet.")
+    elif ascending:
+        print("COMMENTS                         Page{:>10}".format(str(page) + ", ASC"))
+    else:
+        print("COMMENTS                         Page{:>10}".format(str(page) + ", DESC"))
 
-        num_rows = math.ceil(len(comment[1])/47)
-        num_character = 0
-        for i in range(num_rows):
-            print("\t" * comment[-1] + "|" + comment[1][num_character:num_character+50])
-            num_character += 50
+    for i in range(5 * (page-1), 5 * page):
+        if i < len(comments) - 1:
+            date = f'{comments[i][3].month}/{comments[i][3].day}/{comments[i][3].year}'
+            print("\t" * comments[i][-1] + '|{:<5}{:30}{:>12}'.format(comments[i][0], comments[i][2], date))
+
+            num_rows = math.ceil(len(comments[i][1])/47)
+            num_character = 0
+            for j in range(num_rows):
+                print("\t" * comments[i][-1] + "|" + comments[i][1][num_character:num_character+47])
+                num_character += 47
 
 def create_comment(cur, post_id, user, comment_id):
     #Check User input
@@ -173,25 +180,52 @@ def delete_comment(cur, post_id, comment_id, user):
     cur.execute('DELETE FROM comments WHERE id = %s', (comment_id, ))
     print("Comment successfully deleted.")
 
-def depth_first_search(cur, comment_id, post_id, comment_list, depth):
-    cur.execute("SELECT id, body, author, date_created FROM comments WHERE post_id = %s AND parent_id = %s ORDER BY date_created;", (post_id, comment_id))
+def depth_first_search(cur, comment_id, post_id, comment_list, depth, ascending):
+    if ascending:
+        cur.execute("SELECT id, body, author, date_created FROM comments WHERE post_id = %s AND parent_id = %s ORDER BY date_created ASC;", (post_id, comment_id))
+    else:
+        cur.execute("SELECT id, body, author, date_created FROM comments WHERE post_id = %s AND parent_id = %s ORDER BY date_created DESC;", (post_id, comment_id))
     temp_list = cur.fetchall()
 
     for comment in temp_list:
         comment_list.append(comment + (depth, ))
-        depth_first_search(cur, comment[0], post_id, comment_list, depth + 1)
+        depth_first_search(cur, comment[0], post_id, comment_list, depth + 1, ascending)
 
-def get_comments(cur, id):
+def get_comments(cur, id, ascending):
     comment_list = []
     depth = 0
-    cur.execute("SELECT id, body, author, date_created FROM comments WHERE post_id = %s AND parent_id IS NULL ORDER BY date_created;", (id,))
+    if ascending:
+        cur.execute("SELECT id, body, author, date_created FROM comments WHERE post_id = %s AND parent_id IS NULL ORDER BY date_created ASC;", (id,))
+    else:
+        cur.execute("SELECT id, body, author, date_created FROM comments WHERE post_id = %s AND parent_id IS NULL ORDER BY date_created DESC;", (id,))
     temp_list = cur.fetchall()
 
     for comment in temp_list:
         comment_list.append(comment + (depth, ))
-        depth_first_search(cur, comment[0], id, comment_list, depth + 1)
+        depth_first_search(cur, comment[0], id, comment_list, depth + 1, ascending)
     
     return comment_list
+
+def get_page(page, num_comments, user_input):
+    max_pages = math.ceil(num_comments/10)
+
+    if not user_input and page < max_pages:
+        return page + 1
+    elif not user_input:
+        print("You are already on (or past) the last page.")
+        print("To jump to a certain page, provide a page number in the format: page [page number]")
+        print("To jump to the last page, enter an arbitrarily large number for [page number]")
+        return page
+    elif not user_input.isdigit():
+        print("Please enter a valid page number.")
+        return page
+    elif int(user_input) < 1:
+        print("Please enter a valid page number.")
+        return page
+    elif int(user_input) > max_pages:
+        return max_pages
+    else:
+        return int(user_input)
 
 def process_post_commands(cur, id, user):
     #Check if ID is Valid
@@ -209,9 +243,11 @@ def process_post_commands(cur, id, user):
         print('There is no post with id:', id)
         return
 
-    #Print initial display
+    #Print initial display, set up initial settings
+    page = 1
+    ascending = True
     view_post(post)
-    comments = get_comments(cur, id)
+    comments = get_comments(cur, id, ascending)
     while True:
         print()
         user_input = input(f"(Post {id})Enter a Command: ").strip().lower()
@@ -221,13 +257,20 @@ def process_post_commands(cur, id, user):
         elif user_input == 'help':
             print_post_commands()
         elif user_input == 'list':
-            view_comments(comments)
+            view_comments(comments, page, ascending)
+        elif user_input[:5].strip() == 'page':
+            page = get_page(page, len(comments), user_input[5:].strip())
+            view_comments(comments, page, ascending)
+        elif user_input == 'flip':
+            ascending = not ascending
+            comments = get_comments(cur, id, ascending)
+            view_comments(comments, page, ascending)
         elif user_input[:8].strip() == 'comment':
             create_comment(cur, id, user, user_input[8:].strip())
-            comments = get_comments(cur, id)
+            comments = get_comments(cur, id, ascending)
         elif user_input[:7].strip() == "delete":
             delete_comment(cur, id, user_input[7:].strip(), user)
-            comments=get_comments(cur, id)
+            comments=get_comments(cur, id, ascending)
         elif user_input == 'back':
             break
         else:
