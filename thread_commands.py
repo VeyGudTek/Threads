@@ -146,6 +146,33 @@ def create_comment(cur, post_id, user, comment_id):
         cur.execute('INSERT INTO comments (post_id, author, body, date_created) VALUES (%s, %s, %s, %s);', (post_id, user, body, current_date))
     print('comment Created.')
 
+def delete_comment(cur, post_id, comment_id, user):
+    if not comment_id:
+        print("Please include the id of the comment you want to delete in the format: delete [id]")
+        return
+    if not comment_id.isdigit():
+        print(comment_id, "is not a valid id")
+        return
+    comment_id = int(comment_id)
+
+    cur.execute('SELECT * FROM comments WHERE id = %s AND post_id = %s', (comment_id, post_id))
+    comment = cur.fetchone()
+    if not comment:
+        print('There is no comment with id', comment_id, 'in this post.')
+        return
+    
+    if not comment[3] == user:
+        print('You are not the author of this comment.')
+        return
+
+    confirmation = input('Enter "Y" to confirm the deletion of post: ' + comment[4][:30] + '. Enter anything else to cancel: ').strip().upper()
+    if not confirmation == 'Y':
+        print("Comment deletion canceled.")
+        return
+
+    cur.execute('DELETE FROM comments WHERE id = %s', (comment_id, ))
+    print("Comment successfully deleted.")
+
 def depth_first_search(cur, comment_id, post_id, comment_list, depth):
     cur.execute("SELECT id, body, author, date_created FROM comments WHERE post_id = %s AND parent_id = %s ORDER BY date_created;", (post_id, comment_id))
     temp_list = cur.fetchall()
@@ -198,6 +225,9 @@ def process_post_commands(cur, id, user):
         elif user_input[:8].strip() == 'comment':
             create_comment(cur, id, user, user_input[8:].strip())
             comments = get_comments(cur, id)
+        elif user_input[:7].strip() == "delete":
+            delete_comment(cur, id, user_input[7:].strip(), user)
+            comments=get_comments(cur, id)
         elif user_input == 'back':
             break
         else:
