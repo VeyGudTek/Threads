@@ -1,4 +1,4 @@
-A Message Board Program that allows users to interact with a postgres database.
+A Terminal-Based Message Board Program that allows users to interact with a postgres database.
 
 ### Installation
 Requires Python and Postgresql
@@ -9,5 +9,5 @@ Requires Python and Postgresql
 3. Create a .env file with variables DATABASE, DATABASE_USERNAME, PASSWORD, and HOST. They should contain the database name, username for Postgresql, password for Postgres, and 'localhost', respectively.
 3. run python threads.py
 
-### Status - Work in Progress
-Client-Server architecture not implemented (currently local only)
+### This project not being updated
+Originally, this project was meant to include networking capabilites, but it will not be implemented because the code is not modular(due to it not being an object-oriented implementation) and does not use a framework.
